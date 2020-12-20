@@ -1,0 +1,3 @@
+[submodule "Club-Panda"]
+	path = Club-Panda
+	url = ./Club-Panda/.git
