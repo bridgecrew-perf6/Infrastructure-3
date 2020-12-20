@@ -1,3 +1,15 @@
 [submodule "Club-Panda"]
 	path = Club-Panda
 	url = https://github.com/jrtechs/Club-Panda
+[submodule "github-graphs"]
+	path = github-graphs
+	url = https://github.com/jrtechs/github-graphs
+[submodule "NodeJSBlog"]
+	path = NodeJSBlog
+	url =  https://github.com/jrtechs/NodeJSBlog
+[submodule "Portfolio_Website"]
+	path = Portfolio_Website
+	url = https://github.com/jrtechs/Portfolio_Website
+[submodule "HomeBrewPlex"]
+	path = HomeBrewPlex
+	url = https://github.com/jrtechs/HomeBrewPlex
