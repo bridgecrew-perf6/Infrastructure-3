@@ -45,20 +45,6 @@ services:
     environment:
       - NGINX_DOCKER_GEN_CONTAINER=nginx-gen
 
-  # letsencrypt-emergency:
-  #   restart: always
-  #   build: ./lets-encrypt-emergency/
-  #   container_name: letsencrypt-emergency
-  #   volumes_from:
-  #     - nginx
-  #   volumes:
-  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
-  #     - "./volumes/proxy/certs:/etc/nginx/certs:rw"
-  #   environment:
-  #     - NGINX_DOCKER_GEN_CONTAINER=nginx-gen
-
-
-
 # websites configured section ---------------
 
   # gitea personal gitforge -- git.jrtechs.net
@@ -76,7 +62,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "3000:3000"
-      - "222:22"
     environment:
       - USER_UID=1000
       - USER_GID=1000
@@ -97,9 +82,6 @@ services:
       - ./HomeBrewPlex/:/src
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    ports:
-      - "4000:4000"
-      - "4444:4444"
     environment:
       - VIRTUAL_HOST=video.jrtechs.net
       - VIRTUAL_NETWORK=nginx-proxy
@@ -108,21 +90,115 @@ services:
       - LETSENCRYPT_EMAIL=admin@jrtechs.net
 
 
-# portfolio website
-  test-portfolio-website:
+  # portfolio website
+  portfolio-website:
     restart: always
     image: portfolio-website
     build: ./Portfolio_Website
-    container_name: test-portfolio-website
+    container_name: portfolio-website
     networks:
       - proxy-tier
     volumes:
       - "./volumes/proxy/jrtechs.me/:/etc/nginx/conf.d"
-    ports:
-      - 6666:6666
     environment:
-      - VIRTUAL_HOST=test.jrtechs.me
+      - VIRTUAL_HOST=jrtechs.me
       - VIRTUAL_NETWORK=nginx-proxy
       - VIRTUAL_PORT=6666
-      - LETSENCRYPT_HOST=test.jrtechs.me
+      - LETSENCRYPT_HOST=jrtechs.me
       - LETSENCRYPT_EMAIL=jeffery@jrtechs.net
+
+
+  # personal blog
+  blogdb:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: password
+    env_file:
+      - sql.env
+    volumes:
+      - "./NodeJSBlog/db:/var/lib/mysql"
+    networks:
+      - proxy-tier
+  jrtechs-blog:
+    image: nodejsblog
+    build: ./NodeJSBlog
+    container_name: jrtechs-blog
+    volumes:
+      - ./NodeJSBlog:/src
+    restart: always
+    links:
+      - blogdb:database
+    networks:
+      - proxy-tier
+    depends_on:
+      - blogdb
+    environment:
+      - VIRTUAL_HOST=jrtechs.net
+      - VIRTUAL_NETWORK=nginx-proxy
+      - VIRTUAL_PORT=8000
+      - LETSENCRYPT_HOST=jrtechs.net
+      - LETSENCRYPT_EMAIL=jeffery@jrtechs.net
+
+
+# github graphs -- waiting for domain transfer
+  test-github-graphs:
+    image: github-graphs
+    build: ./github-graphs/
+    container_name: github-graphs
+    restart: always
+    networks:
+      - proxy-tier
+    volumes:
+      - ./github-graphs/:/src
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - VIRTUAL_HOST=test2.jrtechs.me
+      - VIRTUAL_NETWORK=nginx-proxy
+      - VIRTUAL_PORT=7000
+      - LETSENCRYPT_HOST=test2.jrtechs.me
+      - LETSENCRYPT_EMAIL=admin@jrtechs.net
+
+# club panda
+  clubdb:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    env_file:
+      - sql.env
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - "./Club-Panda/db:/var/lib/mysql"
+    networks:
+      - proxy-tier
+  php:
+    build: ./Club-Panda/php_docker/
+    restart: always
+    networks:
+      - proxy-tier
+    volumes:
+      - ./Club-Panda:/app/public
+    links:
+      - clubdb
+  club-panda-games:
+    build: ./Club-Panda/
+    restart: always
+    volumes:
+      - ./Club-Panda:/app/public
+    links:
+      - php
+      - clubdb
+    depends_on:
+      - php
+      - clubdb
+    networks:
+      - proxy-tier
+    environment:
+      - VIRTUAL_HOST=clubpanda.jrtechs.net
+      - VIRTUAL_NETWORK=nginx-proxy
+      - VIRTUAL_PORT=80
+      - LETSENCRYPT_HOST=clubpanda.jrtechs.net
+      - LETSENCRYPT_EMAIL=admin@jrtechs.net
