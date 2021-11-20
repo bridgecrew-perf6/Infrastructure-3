@@ -48,3 +48,14 @@ Sql.env file will contain root mysql password.
 I am using root as a SQL user for convenience and because every application has its own database server.
 Password configurations are found in the sql.env file. (not committed to git)
 
+
+
+# Oddities
+
+Due to a bug with the versions of nginx and the nginx-companion docker-compose containers that I'm using, each docker container must expose at least TWO ports. Don't ask why, it is just how it is. 
+That is why many of my images I have something like this:
+
+```Docker
+EXPOSE 8000
+EXPOSE 80
+```
