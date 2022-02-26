@@ -6,46 +6,6 @@ networks:
       name: nginx-proxy
 
 services:
-  nginx: # 1.19
-    restart: always
-    image: nginx
-    container_name: nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/etc/nginx/conf.d"
-      - "/etc/nginx/vhost.d"
-      - "/usr/share/nginx/html"
-      - "/var/run/docker.sock:/tmp/docker.sock:ro"
-      - "./volumes/proxy/certs:/etc/nginx/certs:ro"
-    networks:
-      - proxy-tier
-  nginx-gen: #0.7.0
-    restart: always
-    image: jwilder/docker-gen
-    container_name: nginx-gen
-    volumes:
-      - "/var/run/docker.sock:/tmp/docker.sock:ro"
-      - "./volumes/proxy/templates/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro"
-    volumes_from:
-      - nginx
-    entrypoint: /usr/local/bin/docker-gen -notify-sighup nginx -watch -only-exposed -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
-
-# latest as of script creation jrcs/letsencrypt-nginx-proxy-companion:2.0
-  letsencrypt-nginx-proxy-companion:
-    restart: always
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    container_name: letsencrypt-nginx-proxy-companion
-    volumes_from:
-      - nginx
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./volumes/proxy/certs:/etc/nginx/certs:rw"
-    environment:
-      - NGINX_DOCKER_GEN_CONTAINER=nginx-gen
-
-# websites configured section ---------------
 
   # gitea personal gitforge -- git.jrtechs.net
   # gitea directory is at same level as infrastructure directory.
@@ -65,12 +25,9 @@ services:
     environment:
       - USER_UID=1000
       - USER_GID=1000
-      - VIRTUAL_HOST=git.jrtechs.net
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=3000
-      - LETSENCRYPT_HOST=git.jrtechs.net
-      - LETSENCRYPT_EMAIL=jeffery@jrtechs.net
 
+
+  #video.jrtechs.net
   video:
     image: home-brew-plex
     build: ./HomeBrewPlex/
@@ -82,15 +39,12 @@ services:
       - ./HomeBrewPlex/:/src
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      - VIRTUAL_HOST=video.jrtechs.net
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=4000
-      - LETSENCRYPT_HOST=video.jrtechs.net
-      - LETSENCRYPT_EMAIL=admin@jrtechs.net
+    ports:
+      - "4000:4000"
 
 
   # portfolio website
+  # jrtechs.me
   portfolio-website:
     restart: always
     image: portfolio-website
@@ -100,14 +54,10 @@ services:
       - proxy-tier
     volumes:
       - "./volumes/proxy/jrtechs.me/:/etc/nginx/conf.d"
-    environment:
-      - VIRTUAL_HOST=jrtechs.me
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=6666
-      - LETSENCRYPT_HOST=jrtechs.me
-      - LETSENCRYPT_EMAIL=jeffery@jrtechs.net
+    ports:
+      - "6666:6666"
 
-
+  # jrtechs.net
   # personal blog
   blogdb:
     image: mysql
@@ -134,19 +84,15 @@ services:
       - proxy-tier
     depends_on:
       - blogdb
-    environment:
-      - VIRTUAL_HOST=jrtechs.net
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=8000
-      - LETSENCRYPT_HOST=jrtechs.net
-      - LETSENCRYPT_EMAIL=jeffery@jrtechs.net
+    ports:
+      - "8000:8000"
 
-
-# github graphs -- waiting for domain transfer
-  test-github-graphs:
+  # github graphs
+  # github-graphs.com
+  live-github-graphs:
     image: github-graphs
     build: ./github-graphs/
-    container_name: github-graphs
+    container_name: node-github-graphs
     restart: always
     networks:
       - proxy-tier
@@ -154,22 +100,18 @@ services:
       - ./github-graphs/:/src
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      - VIRTUAL_HOST=test2.jrtechs.me
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=7000
-      - LETSENCRYPT_HOST=test2.jrtechs.me
-      - LETSENCRYPT_EMAIL=admin@jrtechs.net
+    ports:
+      - "7000:7000"
 
-# club panda
+
+  # club panda
+  # clubpanda.jrtechs.net
   clubdb:
     image: mysql
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     env_file:
       - sql.env
-    # environment:
-    #   MYSQL_ROOT_PASSWORD: password
     volumes:
       - "./Club-Panda/db:/var/lib/mysql"
     networks:
@@ -196,9 +138,5 @@ services:
       - clubdb
     networks:
       - proxy-tier
-    environment:
-      - VIRTUAL_HOST=clubpanda.jrtechs.net
-      - VIRTUAL_NETWORK=nginx-proxy
-      - VIRTUAL_PORT=80
-      - LETSENCRYPT_HOST=clubpanda.jrtechs.net
-      - LETSENCRYPT_EMAIL=admin@jrtechs.net
+    ports:
+      - "8888:80"

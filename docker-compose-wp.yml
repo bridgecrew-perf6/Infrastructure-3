@@ -1,0 +1,46 @@
+version: "3.5"
+
+networks:
+  proxy-tier:
+    external:
+      name: nginx-proxy
+
+
+# contents of wp.env file
+#
+# WORDPRESS_DB_HOST=wordpress-db:3306
+# WORDPRESS_DB_USER=wordpress
+# WORDPRESS_DB_PASSWORD=m**
+#
+# MYSQL_ROOT_PASSWORD=**
+# MYSQL_DATABASE=wordpress
+# MYSQL_USER=wordpress
+# MYSQL_PASSWORD=**
+services:
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    volumes:
+      - ./wordpress/wordpress:/var/www/html
+    links:
+      - wordpress-db
+    restart: always
+    env_file:
+      - wp.env
+    networks:
+      - proxy-tier
+    depends_on:
+      - wordpress-db
+    ports:
+      - "9999:80"
+
+  wordpress-db:
+    image: mariadb
+    volumes:
+      - ./wordpress/db_data:/var/lib/mysql
+    restart: always
+    env_file:
+      - wp.env
+    networks:
+      - proxy-tier
