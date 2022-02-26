@@ -5,10 +5,6 @@ Pre-requisits for running this is having docker and docker-composed installed.
 Additionally having mysql-client-default installed will be helpful for managing sql databases
 within the docker images.
 
-All of the websites contributing towards this have their own docker files in their respective github projects, minus my gitea instance.
-The glory of this project is that it manages all of the let's encrypt certs for you and places them in the volumes/proxy/certs directory and then links it to the nginx container to use.
-
-
 ## Cloning the project:
 
 ```bash
@@ -49,13 +45,62 @@ I am using root as a SQL user for convenience and because every application has 
 Password configurations are found in the sql.env file. (not committed to git)
 
 
+## Nginx Configuration
 
-# Oddities
+The base server is configured with a nginx server that does reverse proxies to all of the services
+that run in docker containers.
+This gives me http encryption for all my web servers with let's encrypt.
 
-Due to a bug with the versions of nginx and the nginx-companion docker-compose containers that I'm using, each docker container must expose at least TWO ports. Don't ask why, it is just how it is. 
-That is why many of my images I have something like this:
+```
+# nginx installation
 
-```Docker
-EXPOSE 8000
-EXPOSE 80
+apt install nginx
+
+# has nginx start on startup
+systemctl enable nginx
+```
+
+Boilerplate nginx configration a simple site in the the /etc/nginx/sites-enabled/ folder:
+
+```
+server
+{
+    server_name jrtechs.net;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_redirect off;
+        proxy_set_header Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen 80;
+    listen [::]:80;
+}
+```
+
+You can use this command to test the syntax of the nginx config. 
+
+```
+nginx -t
+```
+
+
+```
+# insall let's encrypt
+apt install python3-certbot-nginx
+
+# initial registration
+certbot --nginx -d jrtechs.net
+
+
+# placed in cron job for certification renewal
+certbot certonly --standalone -d jrtechs.net
 ```
