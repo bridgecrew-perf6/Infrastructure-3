@@ -106,16 +106,6 @@ services:
 
   # club panda
   # clubpanda.jrtechs.net
-  clubdb:
-    image: mysql
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
-    env_file:
-      - sql.env
-    volumes:
-      - "./Club-Panda/db:/var/lib/mysql"
-    networks:
-      - proxy-tier
   php:
     build: ./Club-Panda/php_docker/
     restart: always
